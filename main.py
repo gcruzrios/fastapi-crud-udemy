@@ -5,7 +5,9 @@ from fastapi.security.http import HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import Optional
 from user_jwt import createToken, validateToken
-
+from bd.database import Session, engine, Base
+from models.movie import Movie as ModelView
+from fastapi.encoders import jsonable_encoder
 
 app = FastAPI(
     title="Aprendiendo FastAPI",
@@ -21,7 +23,7 @@ class BearerJWT(HTTPBearer):
                raise HTTPException(status_code=403, detail='Bad Credentials')
           #return auth
 
-
+Base.metadata.create_all(bind=engine)
 
 class User(BaseModel):
      #username:str
@@ -30,93 +32,13 @@ class User(BaseModel):
 
 
 class Movie(BaseModel):
-     id: Optional[str] = None
-     Title:str 
-     Genre: str 
-     Year:int 
-     Country: str
-
-movies = [
-  {
-    "Title": "They Shall Not Grow Old",
-    "Year": 2018,
-    "Rated": "R",
-    "Released": "01 Feb 2019",
-    "Runtime": "99 min",
-    "Genre": "Documentary, History, War",
-    "Director": "Peter Jackson",
-    "Writer": "Peter Jackson",
-    "Actors": "Mark Kermode, Peter Jackson",
-    "Plot": "A documentary about World War I with never-before-seen footage to commemorate the centennial of the end of the war.",
-    "Language": "English",
-    "Country": "UK, New Zealand",
-    "Awards": "Nominated for 1 BAFTA Film Award. Another 4 wins & 10 nominations.",
-    "Poster": "https://m.media-amazon.com/images/M/MV5BZWI3ZThmYzUtNDJhOC00ZWY4LThiNmMtZDgxNjE3Yzk4NDU1XkEyXkFqcGdeQXVyNTk5Nzg1NjQ@._V1_SX300.jpg",
-    "Ratings": [
-      {
-        "Source": "Internet Movie Database",
-        "Value": "8.3/10"
-      },
-      {
-        "Source": "Rotten Tomatoes",
-        "Value": "100%"
-      },
-      {
-        "Source": "Metacritic",
-        "Value": "91/100"
-      }
-    ],
-    "Metascore": 91,
-    "imdbRating": 8.3,
-    "imdbVotes": "21,722",
-    "imdbID": "tt7905466",
-    "Type": "movie",
-    "DVD": "N/A",
-    "BoxOffice": "N/A",
-    "Production": "Warner Bros. Pictures",
-    "Response": "True"
-  },
-  {
-    "Title": "Parasite",
-    "Year": 2019,
-    "Rated": "R",
-    "Released": "08 Nov 2019",
-    "Runtime": "132 min",
-    "Genre": "Comedy, Drama, Thriller",
-    "Director": "Bong Joon Ho",
-    "Writer": "Bong Joon Ho (story), Bong Joon Ho (screenplay), Bong Joon Ho (story by), Jin Won Han (screenplay)",
-    "Actors": "Kang-ho Song, Sun-kyun Lee, Yeo-jeong Jo, Woo-sik Choi",
-    "Plot": "All unemployed, Ki-taek and his family take peculiar interest in the wealthy and glamorous Parks, as they ingratiate themselves into their lives and get entangled in an unexpected incident.",
-    "Language": "Korean, English",
-    "Country": "South Korea",
-    "Awards": "Won 1 Golden Globe. Another 119 wins & 179 nominations.",
-    "Poster": "https://m.media-amazon.com/images/M/MV5BYWZjMjk3ZTItODQ2ZC00NTY5LWE0ZDYtZTI3MjcwN2Q5NTVkXkEyXkFqcGdeQXVyODk4OTc3MTY@._V1_SX300.jpg",
-    "Ratings": [
-      {
-        "Source": "Internet Movie Database",
-        "Value": "8.6/10"
-      },
-      {
-        "Source": "Rotten Tomatoes",
-        "Value": "99%"
-      },
-      {
-        "Source": "Metacritic",
-        "Value": "96/100"
-      }
-    ],
-    "Metascore": 96,
-    "imdbRating": 8.6,
-    "imdbVotes": "128,604",
-    "imdbID": "tt6751668",
-    "Type": "movie",
-    "DVD": "14 Jan 2020",
-    "BoxOffice": "N/A",
-    "Production": "NEON",
-    "Response": "True"
-  },
-  
-]
+     id: Optional[int] = None
+     title:str 
+     overview: str 
+     year:int 
+     rating: float
+     categoria:str
+movies = []
 
 @app.get('/', tags=["Inicio"])
 def read_root():
@@ -131,40 +53,65 @@ def login(user:User):
 
 @app.get('/api/movies',tags=["Movies"])
 def get_movies():
-    return movies
+    db = Session()
+    data = db.query(ModelView).all()
+    return JSONResponse(content=jsonable_encoder(data))
 
 @app.get('/api/movies/{id}', tags=['Movies'])
 def get_movie(id: str):
-    for item in movies:
-        if item["imdbID"] == id:
-            return item
-    return []    
+    
+    db = Session()
+    data = db.query(ModelView).filter(ModelView.id==id).first()
+
+    if not data:
+         return JSONResponse(status_code=404, content={'message': 'Recurso no encontrado'})
+    # for item in movies:
+    #     if item["imdbID"] == id:
+    #         return item
+    return JSONResponse(status_code=200, content=jsonable_encoder(data))
 
 @app.get('/api/movies/',tags=["Movies"])
-def get_movies_category(genre: str):
-    return genre
+def get_movies_category(categoria: str):
+    db = Session()
+    data = db.query(ModelView).filter(ModelView.categoria==categoria).all()
+    return JSONResponse(content=jsonable_encoder(data))
+
+
 
 
 @app.post('/api/movies', tags=["Movies"], dependencies=[Depends(BearerJWT())])
 def create_movie(movie:Movie):
-    movies.append(movie)
+    db = Session()
+    newMovie = ModelView(**movie.dict())
+    db.add(newMovie)
+    db.commit()
+    #movies.append(movie)
     return JSONResponse(content={'message': 'Se ha ingresado una nueva pelicula'})
 
 @app.put('/api/movies/{id}', tags=["Movies"] )
 def update_movie(id: str, movie: Movie):
-    for item in movies:
-            if item["imdbID"] == id:
-                item['Title'] = movie.Title,
-                item['Genre'] = movie.Genre,
-                item['Year'] = Movie.Year,
-                item['Country'] = Movie.Country
-                
-                return item
-    return []   
+    db = Session()
+    data = db.query(ModelView).filter(ModelView.id==id).first()
+    if not data:
+        return JSONResponse(status_code=404, content={'message': 'Recurso no encontrado'})
+    data.title = movie.title
+    data.overview = movie.overview
+    data.year = movie.year
+    data.rating = movie.rating
+    data.categoria = movie.categoria
+    db.commit()
+    return JSONResponse(content={'message': 'Se ha actualizado una pelicula'})  
 
 @app.delete('/api/movies/{id}', tags=["Movies"] ) 
 def delete_movie(id:str):
-     for item in movies:
-            if item["imdbID"] == id:
-                movies.remove(item)
-                return movies
+    #for item in movies:
+    #    if item["imdbID"] == id:
+    #       movies.remove(item)
+    #       return movies
+    db = Session()
+    data = db.query(ModelView).filter(ModelView.id==id).first()
+    if not data:
+        return JSONResponse(status_code=404, content={'message': 'Recurso no encontrado'})
+    db.delete(data)
+    db.commit()
+    return JSONResponse(content={'message': 'Se ha eliminado una pelicula'})  
