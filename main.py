@@ -129,9 +129,6 @@ def login(user:User):
          print(token)
      return token
 
-
-
-
 @app.get('/api/movies',tags=["Movies"])
 def get_movies():
     return movies
