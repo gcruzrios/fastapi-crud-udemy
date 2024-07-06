@@ -22,6 +22,7 @@ base_dir = os.path.dirname(os.path.realpath(__file__))
 from sqlalchemy import create_engine
 
 url = "postgresql+psycopg2://postgres:Grvn240675$$@localhost:5432/movies"
+engine = create_engine(url, echo=True)
 
 # url = URL.create(
 #     drivername="postgresql",
@@ -30,7 +31,7 @@ url = "postgresql+psycopg2://postgres:Grvn240675$$@localhost:5432/movies"
 #     host="localhost",
 #     database="movies"
 # )
-engine = create_engine(url, echo=True)
+
 
 Session = sessionmaker(bind=engine)
 Base = declarative_base()
