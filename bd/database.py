@@ -18,13 +18,18 @@ base_dir = os.path.dirname(os.path.realpath(__file__))
 #engine = create_engine(connection_string, echo=True)
 
 #Postgres
-url = URL.create(
-    drivername="postgresql",
-    username="postgres",
-    password="Grvn240675$$",
-    host="localhost",
-    database="movies"
-)
+
+from sqlalchemy import create_engine
+
+url = "postgresql+psycopg2://postgres:Grvn240675$$@localhost:5432/movies"
+
+# url = URL.create(
+#     drivername="postgresql",
+#     username="postgres",
+#     password="Grvn240675$$",
+#     host="localhost",
+#     database="movies"
+# )
 engine = create_engine(url, echo=True)
 
 Session = sessionmaker(bind=engine)
