@@ -33,5 +33,5 @@ engine = create_engine(databaseUrl, echo =True)
 # )
 
 
-Session = sessionmaker(bind=engine)
+SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()

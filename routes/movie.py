@@ -4,10 +4,11 @@ from fastapi.security import HTTPBearer
 from pydantic import BaseModel
 from typing import Optional
 from user_jwt import createToken, validateToken
-from bd.database import Session
+from bd.database import SessionLocal
 from models.movie import Movie as ModelView
 from fastapi.encoders import jsonable_encoder
 from fastapi import APIRouter
+from auth.auth_bearer import JWTBearer
 
 routerMovie = APIRouter()
 
@@ -20,23 +21,23 @@ class Movie(BaseModel):
      categoria:str
 movies = []
 
-class BearerJWT(HTTPBearer):
-     async def __call__(self, request: Request):
-          auth = await super().__call__(request)
-          data = validateToken(auth.credentials)
-          if data['email'] != 'gcruz@geotecnologias.com':
-               raise HTTPException(status_code=403, detail='Bad Credentials')
+# class BearerJWT(HTTPBearer):
+#      async def __call__(self, request: Request):
+#           auth = await super().__call__(request)
+#           data = validateToken(auth.credentials)
+#           if data['email'] != 'gcruz@geotecnologias.com':
+#                raise HTTPException(status_code=403, detail='Bad Credentials')
 
 @routerMovie.get('/api/movies',tags=["Movies"])
 def get_movies():
-    db = Session()
+    db = SessionLocal()
     data = db.query(ModelView).all()
     return JSONResponse(content=jsonable_encoder(data))
 
 @routerMovie.get('/api/movies/{id}', tags=['Movies'])
 def get_movie(id: str):
     
-    db = Session()
+    db = SessionLocal()
     data = db.query(ModelView).filter(ModelView.id==id).first()
 
     if not data:
@@ -48,16 +49,14 @@ def get_movie(id: str):
 
 @routerMovie.get('/api/movies/',tags=["Movies"])
 def get_movies_category(categoria: str):
-    db = Session()
+    db = SessionLocal()
     data = db.query(ModelView).filter(ModelView.categoria==categoria).all()
     return JSONResponse(content=jsonable_encoder(data))
 
 
-
-
-@routerMovie.post('/api/movies', tags=["Movies"], dependencies=[Depends(BearerJWT())])
+@routerMovie.post('/api/movies', tags=["Movies"], dependencies=[Depends(JWTBearer())])
 def create_movie(movie:Movie):
-    db = Session()
+    db = SessionLocal()
     newMovie = ModelView(**movie.dict())
     db.add(newMovie)
     db.commit()
@@ -66,7 +65,7 @@ def create_movie(movie:Movie):
 
 @routerMovie.put('/api/movies/{id}', tags=["Movies"] )
 def update_movie(id: str, movie: Movie):
-    db = Session()
+    db = SessionLocal()
     data = db.query(ModelView).filter(ModelView.id==id).first()
     if not data:
         return JSONResponse(status_code=404, content={'message': 'Recurso no encontrado'})
@@ -84,7 +83,7 @@ def delete_movie(id:str):
     #    if item["imdbID"] == id:
     #       movies.remove(item)
     #       return movies
-    db = Session()
+    db = SessionLocal()
     data = db.query(ModelView).filter(ModelView.id==id).first()
     if not data:
         return JSONResponse(status_code=404, content={'message': 'Recurso no encontrado'})
