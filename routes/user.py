@@ -65,7 +65,7 @@ def login(request: schemas.requestdetails, db: Session = Depends(get_session)):
             detail="Incorrect password"
         )
     
-    access=create_access_token(user.username)
+    access=create_access_token(user.id)
    
     token_db = TokenTable(user_id=user.id,  access_token=access,  status=True)
     db.add(token_db)

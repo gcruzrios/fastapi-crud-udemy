@@ -39,7 +39,7 @@ def create_access_token(subject: str) -> Dict[str,str]:
     #     print("else way")
 
     payload = {
-        "sub": subject,
+        "user_id": subject,
         "expires": time.time() + 600
     }
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
